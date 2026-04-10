@@ -3,15 +3,16 @@ import seaborn as sns
 import numpy as np
 from heapq import heappush, heappop
 
-def exp_lambda(λ):      #Fonction pour generer temps random selon la loi exponentielle de paramètre λ
+def exp_lambda(λ):      #Fonction pour generer temps random selon la loi exponentielle de paramètre λ.
     return np.random.exponential(1 / λ)   
 
-def backoff(i, tau):    #Fonction pour generer temps random selon la loi exponentielle de paramètre (2^i)*tau
+def backoff(i, tau):    #Fonction pour generer temps random selon la loi exponentielle de paramètre (2^i)*tau.
     return np.random.exponential((2**i) * tau)  
   
 
 def simulate(N, lam, K, tau, T_max):
 
+    #Initialisation des variables de la simulation.
     echeancier = []
     t = 0
     stations = []
@@ -19,38 +20,41 @@ def simulate(N, lam, K, tau, T_max):
     canal_libre = True
     log = []
 
-    for i in range(N):      #Initialisation des stations a l'état 1 et pas de paquets dans la file d'attente
+    for i in range(N):      #Initialisation des stations a l'état 1 et pas de paquets dans la file d'attente.
         stations.append({"queue_len": 0,
             "state" : 1,
             "attempt_scheduled" : False,
             "is_attempting" : False,
             "end_valid": False})
     
-    for i in range(N):      #Initialisation de l'echeancier avec les evenements d'arrivee des paquets a chaque station
+    for i in range(N):      #Initialisation de l'echeancier avec les evenements d'arrivee des paquets a chaque station.
         t_arrival = exp_lambda(lam)
         heappush(echeancier, (t_arrival, "ARRIVAL", i))
 
 
     while t < T_max: 
 
-        evt = heappop(echeancier)     #Recuperation de l'evenement le plus proche
+        evt = heappop(echeancier)     #Récuperation de l'evenement le plus proche.
         t = evt[0]
         station = evt[2]
         match evt[1]:
-            case "ARRIVAL":   #Si c'est un evenement d'arrivee de paquet
+            case "ARRIVAL":   #Si c'est un evenement d'arrivee de paquet.
                 t_arrival = t + exp_lambda(lam)
                 heappush(echeancier, (t_arrival, "ARRIVAL", station))
-
-                if stations[station]["queue_len"] < K:
+                
+                #Si la file d'attente de la station n'est pas pleine, on ajoute le paquet a la file d'attente.
+                if stations[station]["queue_len"] < K:      
                     stations[station]["queue_len"] += 1
 
+                #Si la station n'est pas deja en train d'essayer d'envoyer un paquet et qu'il n'y a pas deja un attempt de programmé pour cette station, on programme un attempt pour cette station.
                 if stations[station]["queue_len"] == 1 and not stations[station]["attempt_scheduled"] and not stations[station]["is_attempting"]:
                     heappush(echeancier, (t, "ATTEMPT", station))
                     stations[station]["attempt_scheduled"] = True
                 
 
-            case "ATTEMPT":   #Si c'est un la station essaye d'envoyer un paquet
+            case "ATTEMPT":   #Si c'est un evenement d'essai d'envoi de paquet.
 
+                #Si le canal est libre, on programme la fin de l'envoi du paquet.
                 if canal_libre:
                     heappush(echeancier, (t+1, "END_TX", station))
                     canal_libre = False
@@ -58,6 +62,7 @@ def simulate(N, lam, K, tau, T_max):
                     stations[station]["end_valid"] = True
                     heappush(log, (t, station, "ATTEMPT"))
 
+                #Si le canal n'est pas libre, il y a une collision, on programme un backoff pour les deux stations.
                 else: 
                     stations[station]["is_attempting"] = False
                     stations[station]["attempt_scheduled"] = True
@@ -74,19 +79,23 @@ def simulate(N, lam, K, tau, T_max):
                             heappush(echeancier, (t_backoff_i, "ATTEMPT", i))
                             stations[i]["end_valid"] = False
 
-                    heappush(log, (t, station, "COLLISION", r))   #On ajoute l'evenement de collision au log
+                    heappush(log, (t, station, "COLLISION", r))   #On ajoute l'évenement de collision au log.
                     canal_libre = True
 
 
-            case "END_TX":    #Si un envoi de paquet est terminer
+            case "END_TX":    #Si un envoi de paquet est terminer.
+
+                #Si il n'y a pas eu de collision pendant l'envoi du paquet, on programme la fin de l'envoi du paquet.
                 if stations[station]["end_valid"]:   
-                    stations[station]["state"] = 1  #On remet la station a l'etat de base
+                    stations[station]["state"] = 1  #On remet la station a l'etat de base.
                     stations[station]["queue_len"] -= 1
-                    reussis.append((station, t))   #On ajoute le paquet a la liste des paquets reussis avec le temps d'arrivee du paquet
+                    reussis.append((station, t))   #On ajoute le paquet a la liste des paquets reussis avec le temps d'arrivee du paquet.
                     canal_libre = True
                     stations[station]["is_attempting"] = False
                     stations[station]["attempt_scheduled"] = False
-                    if stations[station]["queue_len"] > 0:   #Si il y a encore des paquets dans la file d'attente de la station, on programme un nouvel attempt
+
+                    #Si il y a encore des paquets dans la file d'attente de la station, on programme un nouvel attempt.
+                    if stations[station]["queue_len"] > 0:   
                         heappush(echeancier, (t, "ATTEMPT", station))
                         stations[station]["attempt_scheduled"] = True
                     heappush(log, (t, station, "END_TX"))
