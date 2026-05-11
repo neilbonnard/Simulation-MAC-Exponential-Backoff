@@ -311,8 +311,8 @@ story += [
     SP(),
     H2("4.4 Limites du modele"),
     Bul("Detection de collision supposee instantanee (pas de delai de propagation)."),
-    Bul("Toutes les stations sont identiques et a portee les unes des autres (pas de noeud cache)."),
-    Bul("Duree d'emission deterministe (paquets de taille fixe)."),
+    Bul("La libération du canal se fait des qu'il y a collision et pas à la fin de l'emission des paquets. Les collisions sont donc plus courtes et ne concernent que deux stations, ce qui fluidifie le flux."),
+    Bul("Dans notre implémentation, lorsqu’un paquet arrive sur une station dont la file d’attente était vide, une tentative d’émission est programmée immédiatement. Le modèle ne représente donc pas de délai de traitement interne ou de temps d’écoute préalable du canal avant la première tentative d’émission."),
     SP(),
     PageBreak(),
 ]
