@@ -2,7 +2,7 @@
 
 Simulation par événements discrets d'un protocole MAC avec algorithme d'Exponential Backoff.
 
-**Auteur :** Neil Bonnard — 22505907
+**Auteur :** Neil Bonnard — 22505907 x Amine Ben Elmahdi - 22503866
 
 ---
 
